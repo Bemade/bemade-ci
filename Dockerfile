@@ -1,5 +1,6 @@
-ARG codename=focal
+ARG codename=jammy
 
+# Currently only written to work with a single version
 FROM ubuntu:$codename
 ENV LANG C.UTF-8
 USER root
@@ -20,22 +21,15 @@ RUN apt-get update -qq \
 ENV PIPX_BIN_DIR=/usr/local/bin
 
 # Install wkhtml
-RUN case $(lsb_release -c -s) in \
-      focal) WKHTML_DEB_URL=https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.focal_amd64.deb ;; \
-      jammy) WKHTML_DEB_URL=https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb ;; \
-    esac \
+RUN WKHTML_DEB_URL=https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb \
     && curl -sSL $WKHTML_DEB_URL -o /tmp/wkhtml.deb \
     && apt-get update -qq \
     && DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends /tmp/wkhtml.deb  \
     && rm /tmp/wkhtml.deb
 
 # Install nodejs dependencies
-RUN case $(lsb_release -c -s) in \
-      focal) NODE_SOURCE="deb https://deb.nodesource.com/node_15.x focal main" \
-             && curl -sSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - ;; \
-      jammy) NODE_SOURCE="deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" \
-             && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg ;; \
-    esac \
+RUN NODE_SOURCE="deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && echo "$NODE_SOURCE" | tee /etc/apt/sources.list.d/nodesource.list \
     && apt-get update -qq \
     && DEBIAN_FRONTEND=noninteractive apt-get install -qq nodejs
@@ -97,20 +91,18 @@ RUN pipx inject --pip-args="--no-cache-dir" pyproject-dependencies $build_deps
 
 # Make a virtualenv for Odoo so we isolate from system python dependencies and
 # make sure addons we test declare all their python dependencies properly
-ARG setuptools_constraint
+# ARG setuptools_constraint
 RUN python$python_version -m venv /opt/odoo-venv \
-    && /opt/odoo-venv/bin/pip install -U "setuptools$setuptools_constraint" "wheel" "pip" \
+    # && /opt/odoo-venv/bin/pip install -U "setuptools$setuptools_constraint" "wheel" "pip" \
+    && /opt/odoo-venv/bin/pip install -U "setuptools" "wheel" "pip" \
     && /opt/odoo-venv/bin/pip list
 ENV PATH=/opt/odoo-venv/bin:$PATH
 
 ARG odoo_version
 
 # Install Odoo requirements (use ADD for correct layer caching).
-# We use requirements from OCB for easier maintenance of older versions.
-# We use no-binary for psycopg2 because its binary wheels are sometimes broken
-# and not very portable.
-ADD https://raw.githubusercontent.com/OCA/OCB/$odoo_version/requirements.txt /tmp/ocb-requirements.txt
-RUN pip install --no-cache-dir --no-binary psycopg2 -r /tmp/ocb-requirements.txt
+ADD https://raw.githubusercontent.com/odoo/odoo/$odoo_version/requirements.txt /tmp/requirements.txt
+RUN pip install -vvv --no-cache-dir -r /tmp/requirements.txt
 
 # Install other test requirements.
 # - coverage
@@ -120,12 +112,9 @@ RUN pip install --no-cache-dir \
   websocket-client
 
 # Install Odoo (use ADD for correct layer caching)
-ARG odoo_org_repo=odoo/odoo
-ADD https://api.github.com/repos/$odoo_org_repo/git/refs/heads/$odoo_version /tmp/odoo-version.json
-RUN mkdir /tmp/getodoo \
-    && (curl -sSL https://github.com/$odoo_org_repo/tarball/$odoo_version | tar -C /tmp/getodoo -xz) \
-    && mv /tmp/getodoo/* /opt/odoo \
-    && rmdir /tmp/getodoo
+COPY odoo /opt/odoo
+COPY enterprise /opt/odoo/enterprise
+COPY design-themes /opt/odoo/design-themes
 RUN pip install --no-cache-dir -e /opt/odoo \
     && pip list
 
@@ -141,15 +130,11 @@ ENV PGHOST=postgres
 ENV PGUSER=odoo
 ENV PGPASSWORD=odoo
 ENV PGDATABASE=odoo
-# This PEP 503 index uses odoo addons from OCA and redirects the rest to PyPI,
-# in effect hiding all non-OCA Odoo addons that are on PyPI.
-ENV PIP_INDEX_URL=https://wheelhouse.odoo-community.org/oca-simple-and-pypi
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1
-ENV PIP_NO_PYTHON_VERSION_WARNING=1
+
 # Control addons discovery. INCLUDE and EXCLUDE are comma-separated list of
 # addons to include (default: all) and exclude (default: none)
 ENV ADDONS_DIR=.
-ENV ADDONS_PATH=/opt/odoo/addons
+ENV ADDONS_PATH=/opt/odoo/addons,/opt/odoo/enterprise,/opt/odoo/design-themes
 ENV INCLUDE=
 ENV EXCLUDE=
 ENV OCA_GIT_USER_NAME=oca-ci
