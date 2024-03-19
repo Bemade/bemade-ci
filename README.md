@@ -1,10 +1,10 @@
-# Container image to run OCA CI tests
+# Container image to run Bemade CI tests
 
-⚠️ These images are meant for running CI tests of the Odoo Community
-Association. They are *not* intended for any other purpose, and in particular
+⚠️ These images are meant for running CI tests of Odoo addons developed by
+Bemade inc. They are *not* intended for any other purpose, and in particular
 they are not fit for running Odoo in production. If you decide to base your own
 CI on these images, be aware that, while we will not break things without
-reason, we will prioritize ease of maintenance for OCA over backward
+reason, we will prioritize ease of maintenance for Bemade over backward
 compatibility. ⚠️
 
 These images provide the following guarantees:
@@ -54,15 +54,6 @@ Available commands:
 - `oca_git_push_if_remote_did_not_change`: push local commits unless the remote
   tracked branch has evolved.
 - `oca_export_and_push_pot` combines the two previous commands.
-
-## Build
-
-Build args:
-
-- python_version (no default)
-- odoo_version (no default)
-- codename (default: focal)
-- odoo_org_repo (default: odoo/odoo)
 
 ## Tests
 
