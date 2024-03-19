@@ -1,0 +1,11 @@
+services:
+  postgres:
+    image: postgres:12.0
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+      POSTGRES_DB: odoo
+    ports:
+      - 5432:5432
+  odoo:
+    image: test
