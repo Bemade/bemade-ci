@@ -1,12 +1,15 @@
 [submodule "odoo"]
-	path = odoo
-	url = https://github.com/odoo/odoo.git
-	branch = 17.0
+    path = odoo
+    url = https://github.com/odoo/odoo.git
+    branch = 17.0
+    shallow = true
 [submodule "enterprise"]
-	path = enterprise
-	url = git@github.com:odoo/enterprise
-	branch = 17.0
+    path = enterprise
+    url = git@github.com:odoo/enterprise
+    branch = 17.0
+    shallow = true
 [submodule "design-themes"]
-	path = design-themes
-	url = git@github.com:odoo/design-themes
-	branch = 17.0
+    path = design-themes
+    url = git@github.com:odoo/design-themes
+    branch = 17.0
+    shallow = true

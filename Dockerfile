@@ -49,7 +49,7 @@ RUN curl -sSL https://dl.google.com/linux/direct/google-chrome-stable_current_am
 
 RUN add-apt-repository -y ppa:deadsnakes/ppa
 
-ARG python_version
+ARG python_version=3.10
 
 # Install build dependencies for python libs commonly used by Odoo and OCA
 RUN apt-get update -qq \
@@ -98,11 +98,11 @@ RUN python$python_version -m venv /opt/odoo-venv \
     && /opt/odoo-venv/bin/pip list
 ENV PATH=/opt/odoo-venv/bin:$PATH
 
-ARG odoo_version
+ARG odoo_version=17.0
 
 # Install Odoo requirements (use ADD for correct layer caching).
 ADD https://raw.githubusercontent.com/odoo/odoo/$odoo_version/requirements.txt /tmp/requirements.txt
-RUN pip install -vvv --no-cache-dir -r /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Install other test requirements.
 # - coverage
@@ -112,9 +112,9 @@ RUN pip install --no-cache-dir \
   websocket-client
 
 # Install Odoo (use ADD for correct layer caching)
-COPY odoo /opt/odoo
-COPY enterprise /opt/odoo/enterprise
-COPY design-themes /opt/odoo/design-themes
+ADD odoo /opt/odoo/
+COPY enterprise /opt/odoo/enterprise/
+COPY design-themes /opt/odoo/design-themes/
 RUN pip install --no-cache-dir -e /opt/odoo \
     && pip list
 
