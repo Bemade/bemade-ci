@@ -21,13 +21,14 @@ ARG TARGETARCH
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y --no-install-recommends \
+    apt-get install -y \
         ca-certificates \
         curl \
         dirmngr \
         fonts-noto-cjk \
         gnupg \
         libssl-dev \
+        libsasl2-dev \
         node-less \
         npm \
         python3-magic \
@@ -45,7 +46,21 @@ RUN apt-get update && \
         python3-watchdog \
         python3-xlrd \
         python3-xlwt \
-        xz-utils && \
+        xz-utils \
+        build-essential \
+        python3 \
+        python3-venv \
+        libxml2-dev \
+        libxslt1-dev \
+        libz-dev \
+        libxmlsec1-dev \
+        libldap2-dev \
+        libjpeg-dev \
+        libcups2-dev \
+        swig \
+        libffi-dev \
+        libpq-dev \
+        pkg-config && \
     if [ -z "${TARGETARCH}" ]; then \
         TARGETARCH="$(dpkg --print-architecture)"; \
     fi; \
@@ -77,25 +92,23 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main' > /etc/a
 # Install rtlcss (on Debian buster)
 RUN npm install -g rtlcss
 
-# Install Odoo
-RUN curl -o odoo.deb -sSL \
-    http://nightly.odoo.com/${ODOO_VERSION}/nightly/deb/odoo_${ODOO_VERSION}.latest_all.deb \
-    && apt-get update \
-    && apt-get -y install --no-install-recommends ./odoo.deb \
-    && rm -rf /var/lib/apt/lists/* odoo.deb
+# Install Odoo from sources
 
-# Copy Odoo configuration file
-COPY ./odoo.conf /etc/odoo/
+COPY ./odoo /opt/odoo/
 COPY ./enterprise/ /opt/odoo/enterprise/
 COPY ./design-themes /opt/odoo/design-themes/
+COPY ./odoo.conf /etc/odoo/
 
-# Set default user when running the container
-# USER odoo
-
-# Install manifestoo and other testing requirements
-
-RUN pip3 install manifestoo coverage websocket-client
+# Install Odoo and testing requirements in a virtual environment
+RUN python3.10 -m venv /opt/odoo/venv \
+    && source /opt/odoo/venv/bin/activate \
+    && sed -i -e 's/^urllib3==.*/urllib3/' /opt/odoo/requirements.txt \
+    && sed -i -e 's/^psycopg2==.*/psycopg2-binary/' /opt/odoo/requirements.txt \
+    && echo "phonenumbers" >> /opt/odoo/requirements.txt \
+    && pip install -r /opt/odoo/requirements.txt \
+    && pip install manifestoo \
+    && deactivate
 
 # Install the run_tests command
 
-COPY ./run_tests.sh /usr/local/bin/
+COPY ./run_tests /usr/local/bin/
