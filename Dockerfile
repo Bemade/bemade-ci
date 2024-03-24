@@ -112,3 +112,5 @@ RUN python3.10 -m venv /opt/odoo/venv \
 # Install the run_tests command
 
 COPY ./run_tests /usr/local/bin/
+
+VOLUME ["/mnt/extra-addons", "/mnt/logs"]
