@@ -19,9 +19,9 @@ ARG TARGETARCH
 
 # Install some deps, lessc and less-plugin-clean-css, and wkhtmltopdf
 
-RUN apt-get update && \
+RUN apt update && \
     DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y \
+    apt install -y \
         ca-certificates \
         curl \
         dirmngr \
@@ -60,7 +60,8 @@ RUN apt-get update && \
         swig \
         libffi-dev \
         libpq-dev \
-        pkg-config && \
+        pkg-config \
+        lsof && \
     if [ -z "${TARGETARCH}" ]; then \
         TARGETARCH="$(dpkg --print-architecture)"; \
     fi; \
@@ -74,6 +75,15 @@ RUN apt-get update && \
     && echo ${WKHTMLTOPDF_SHA} wkhtmltox.deb | sha1sum -c - \
     && apt-get install -y --no-install-recommends ./wkhtmltox.deb \
     && rm -rf /var/lib/apt/lists/* wkhtmltox.deb
+
+# Install locales package and generate en_US.UTF-8
+RUN apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
+    && locale-gen en_US.UTF-8
+
+# Set environment variables to configure locale
+ENV LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8
 
 # install latest postgresql-client
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
@@ -106,11 +116,13 @@ RUN python3.10 -m venv /opt/odoo/venv \
     && sed -i -e 's/^psycopg2==.*/psycopg2-binary/' /opt/odoo/requirements.txt \
     && echo "phonenumbers" >> /opt/odoo/requirements.txt \
     && pip install -r /opt/odoo/requirements.txt \
-    && pip install manifestoo \
+    && pip install manifestoo websocket-client \
     && deactivate
 
 # Install the run_tests command
 
 COPY ./run_tests /usr/local/bin/
+COPY ./run_tests_individually /usr/local/bin
+COPY ./init_extra_requirements /usr/local/bin
 
-VOLUME ["/mnt/extra-addons", "/mnt/logs"]
+VOLUME ["/mnt/extra-addons", "/mnt/.repos", "/mnt/logs", "/mnt/extra-requirements"]

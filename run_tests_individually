@@ -24,7 +24,7 @@ run_test() {
     echo "testing $addon on port $port"
     logfile=$LOGDIR/$( date "+%Y-%m-%d_%H:%M:%S")"-$addon.log"
     # Run the tests and if everything passed, delete the logfile
-    psql postgres -c "drop database if exists $dbname;"; odoo/odoo-bin -c conf/odoo.conf -d "$dbname" --test-enable -i "$addon" \
+    psql odoo -c "drop database if exists $dbname;"; /opt/odoo/odoo-bin -c /etc/odoo/odoo.conf -d "$dbname" --test-enable -i "$addon" \
          --stop-after-init --logfile "$logfile" -p "$port"
     if [ -f "$logfile" ]; then
         echo "Test failures for $addon. Log file at $logfile"
@@ -34,11 +34,14 @@ run_test() {
     (( running_tests-=1 ))
 }
 
-WORKDIR=$1
+# Initialize extra requirements found in mnt/extra-requirements
+init_extra_requirements
+
+source /opt/odoo/venv/bin/activate
+WORKDIR="/mnt/extra-addons"
 ADDONS_LIST=$(manifestoo --select-addons-dir="$WORKDIR" --odoo-series=17.0 list --separator=,)
-source venv/bin/activate
 IFS=',' read -r -a addons <<< "$ADDONS_LIST"
-LOGDIR="${2%/}"  # Removes any trailing slash
+LOGDIR="/mnt/logs"
 
 # Keep track of which tests are running
 while (( ${#addons[@]} > 0 ));
@@ -56,4 +59,3 @@ do
 
 done
 deactivate
-

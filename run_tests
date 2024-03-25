@@ -1,5 +1,14 @@
 #!/bin/bash
 
-ADDONS_LIST=$(manifestoo --select-addons-dir="$GITHUB_WORKSPACE" --odoo-series=17.0 list --separator=,)
+# Initialize extra requirements found in mnt/extra-requirements
+init_extra_requirements
+
+source /opt/odoo/venv/bin/activate
+if [ -z "$1" ]; then
+    ADDONS_LIST=$1
+else
+    ADDONS_LIST=$(manifestoo --select-addons-dir="$GITHUB_WORKSPACE" --odoo-series=17.0 list --separator=,)
+fi
 
 /opt/odoo/odoo-bin -c /etc/odoo/odoo.conf -d test -i "$ADDONS_LIST" --test-enable --stop-after-init
+deactivate

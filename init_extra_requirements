@@ -1,0 +1,8 @@
+#!/bin/bash
+
+source /opt/odoo/venv/bin/activate
+extra_reqs=(/mnt/extra-requirements/*)
+for reqfile in "${extra_reqs[@]}"; do
+    pip install -r "/mnt/extra-requirements/$reqfile"
+done
+deactivate
