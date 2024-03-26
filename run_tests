@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run a single Odoo test instance
-# Usage: run_tests [-a comma,separated,addons,list] [-p]
-# -p runs 3 test instances in parallel until the list is covered
+# Usage: run_tests [-a comma,separated,addons,list] [-s]
+# -s runs in single test instance mode, otherwise 3 runners run in parallel
 # Addons must be in /mnt/extra-addons or $GITHUB_WORKSPACE
 
 # Function to check if a port is in use
@@ -57,10 +57,10 @@ init_extra_requirements() {
 }
 
 # Parse options and set up addons list and run mode
-while getopts 'pa:' OPTION; do
+while getopts 'sa:' OPTION; do
     case "$OPTION" in
-        p)
-            MODE="parallel"
+        s)
+            MODE="single"
             ;;
         a)
             ADDONS_LIST="$OPTARG"
@@ -72,7 +72,7 @@ while getopts 'pa:' OPTION; do
     esac
 done
 if [[ -z $MODE ]]; then
-    MODE="single"
+    MODE="parallel"
 fi
 echo "Addons List: $ADDONS_LIST"
 echo "Mode: $MODE"
