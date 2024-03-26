@@ -1,14 +1,115 @@
 #!/bin/bash
+# Run a single Odoo test instance
+# Usage: run_tests [-a comma,separated,addons,list] [-p]
+# -p runs 3 test instances in parallel until the list is covered
+# Addons must be in /mnt/extra-addons or $GITHUB_WORKSPACE
 
-# Initialize extra requirements found in mnt/extra-requirements
-init_extra_requirements
+# Function to check if a port is in use
+port_in_use() {
+    lsof -i :$1 >/dev/null
+}
 
-source /opt/odoo/venv/bin/activate
-if [ -z "$1" ]; then
-    ADDONS_LIST=$1
-else
-    ADDONS_LIST=$(manifestoo --select-addons-dir="$GITHUB_WORKSPACE" --odoo-series=17.0 list --separator=,)
+# Function to find the next available port
+next_available_port() {
+    local port=$1
+    while port_in_use $port; do
+        ((port++))
+    done
+    echo $port
+}
+
+# Run a single odoo test suite on a given addon and port
+run_test_instance() {
+    local addon=$1
+    local LOGDIR=$2
+    local dbname
+    local logfile
+    # If we are testing multiple addons, we name files differently
+    if [[ $addon == *","* ]]; then
+        dbname="test_multi"
+        logfile=$LOGDIR/$( date "+%Y-%m-%d_%H:%M:%S")"-multi-addon.log"
+    else
+        dbname="test_$addon"
+        logfile=$LOGDIR/$( date "+%Y-%m-%d_%H:%M:%S")"-$addon.log"
+    fi
+    local port
+    port=$(next_available_port 8069)
+    echo "testing $addon on port $port"
+    # Run the tests and if everything passed, delete the logfile
+    psql odoo -c "drop database if exists $dbname;"; /opt/odoo/odoo-bin -c /etc/odoo/odoo.conf -d "$dbname" --test-enable -i "$addon" \
+         --stop-after-init --logfile "$logfile" -p "$port"
+    if [ -f "$logfile" ]; then
+        echo "Test failures for $addon. Log file at $logfile"
+    else
+        # Prepend the list of addons to the log file
+        echo -e "Addons tested: $addons\n$(cat "$logfile")" > "$logfile.temp" && mv "$logfile.temp" "$logfile"
+        echo "Done testing $addon. No failures reported. Log file deleted."
+    fi
+    (( running_tests-=1 ))
+}
+
+# Initialize and install requirements from the /mnt/extra-requirements volume
+init_extra_requirements() {
+    extra_reqs=(/mnt/extra-requirements/*)
+    for reqfile in "${extra_reqs[@]}"; do
+        pip install -r "$reqfile"
+    done
+}
+
+# Parse options and set up addons list and run mode
+while getopts 'pa:' OPTION; do
+    case "$OPTION" in
+        p)
+            MODE="parallel"
+            ;;
+        a)
+            ADDONS_LIST="$OPTARG"
+            ;;
+        *)
+            echo "Invalid flag $OPTION."
+            exit 1
+            ;;
+    esac
+done
+if [[ -z $MODE ]]; then
+    MODE="single"
+fi
+echo "Addons List: $ADDONS_LIST"
+echo "Mode: $MODE"
+if [[ -z $ADDONS_LIST ]]; then
+    local ADDONS_DIR
+    if [[ -z $GITHUB_WORKSPACE ]]; then
+        ADDONS_DIR="/mnt/extra-addons"
+    else
+        ADDONS_DIR="$GITHUB_WORKSPACE"
+    fi
+    ADDONS_LIST=$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list --separator=,)
 fi
 
-/opt/odoo/odoo-bin -c /etc/odoo/odoo.conf -d test -i "$ADDONS_LIST" --test-enable --stop-after-init
+source /opt/odoo/venv/bin/activate
+
+init_extra_requirements
+
+parse_options
+
+if [[ $MODE = "parallel" ]]; then
+    IFS=',' read -r -a addons <<< "$ADDONS_LIST"
+    while (( ${#addons[@]} > 0 ));
+    do
+        running_tests=$(jobs -p | wc -l)
+        # Run at most 3 tests at a time, otherwise wait for one to finish
+        if (( running_tests < 3 )); then
+            # Pop the first addon from the queue
+            sleep 3
+            run_test_instance "${addons[0]}" "$LOGDIR" &
+            addons=("${addons[@]:1}")
+        else
+            sleep 10
+        fi
+
+    done
+else
+    run_test_instance "$ADDONS_LIST" "/mnt/logs"
+fi
+
 deactivate

@@ -122,7 +122,5 @@ RUN python3.10 -m venv /opt/odoo/venv \
 # Install the run_tests command
 
 COPY ./run_tests /usr/local/bin/
-COPY ./run_tests_individually /usr/local/bin
-COPY ./init_extra_requirements /usr/local/bin
 
 VOLUME ["/mnt/extra-addons", "/mnt/.repos", "/mnt/logs", "/mnt/extra-requirements"]
