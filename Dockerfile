@@ -116,7 +116,7 @@ RUN python3.10 -m venv /opt/odoo/venv \
     && sed -i -e 's/^psycopg2==.*/psycopg2-binary/' /opt/odoo/requirements.txt \
     && echo "phonenumbers" >> /opt/odoo/requirements.txt \
     && pip install -r /opt/odoo/requirements.txt \
-    && pip install manifestoo websocket-client \
+    && pip install manifestoo websocket-client==1.2.3 \
     && deactivate
 
 # Install the run_tests command
