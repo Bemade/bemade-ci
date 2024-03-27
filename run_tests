@@ -71,13 +71,17 @@ while getopts 'sa:' OPTION; do
             ;;
     esac
 done
+
+# Load the Odoo virtual environment
+source /opt/odoo/venv/bin/activate
+
+# Install any extra Python dependencies
+init_extra_requirements
+
 if [[ -z $MODE ]]; then
     MODE="parallel"
 fi
-echo "Addons List: $ADDONS_LIST"
-echo "Mode: $MODE"
 if [[ -z $ADDONS_LIST ]]; then
-    local ADDONS_DIR
     if [[ -z $GITHUB_WORKSPACE ]]; then
         ADDONS_DIR="/mnt/extra-addons"
     else
@@ -85,12 +89,6 @@ if [[ -z $ADDONS_LIST ]]; then
     fi
     ADDONS_LIST=$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list --separator=,)
 fi
-
-source /opt/odoo/venv/bin/activate
-
-init_extra_requirements
-
-parse_options
 
 if [[ $MODE = "parallel" ]]; then
     IFS=',' read -r -a addons <<< "$ADDONS_LIST"
@@ -101,7 +99,7 @@ if [[ $MODE = "parallel" ]]; then
         if (( running_tests < 3 )); then
             # Pop the first addon from the queue
             sleep 3
-            run_test_instance "${addons[0]}" "$LOGDIR" &
+            run_test_instance "${addons[0]}" "/mnt/logs" &
             addons=("${addons[@]:1}")
         else
             sleep 10
