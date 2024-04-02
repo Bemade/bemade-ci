@@ -38,13 +38,10 @@ run_test_instance() {
     # Run the tests and if everything passed, delete the logfile
     psql odoo -c "drop database if exists $dbname;"; /opt/odoo/odoo-bin -c /etc/odoo/odoo.conf -d "$dbname" --test-enable -i "$addon" \
          --stop-after-init --logfile "$logfile" -p "$port"
-    if [ -f "$logfile" ]; then
-        echo "Test failures for $addon. Log file at $logfile"
-    else
-        # Prepend the list of addons to the log file
-        echo -e "Addons tested: $addons\n$(cat "$logfile")" > "$logfile.temp" && mv "$logfile.temp" "$logfile"
-        echo "Done testing $addon. No failures reported. Log file deleted."
-    fi
+    # Prepend the list of addons to the log file
+    echo -e "Addons tested: $addons\n$(cat "$logfile")" > "$logfile.temp" && mv "$logfile.temp" "$logfile"
+    echo "Done testing $addon."
+    psql odoo -c "drop database if exists $dbname;"
     (( running_tests-=1 ))
 }
 
@@ -52,7 +49,12 @@ run_test_instance() {
 init_extra_requirements() {
     extra_reqs=(/mnt/extra-requirements/*)
     for reqfile in "${extra_reqs[@]}"; do
-        pip install -r "$reqfile"
+        # Make sure not to install pdfminer normally because pdfminer.six is
+        # required but we need to install it with --no-deps to keep the
+        # functional verion of cryptography
+        pip install charset-normalizer
+        pip install --no-deps pdfminer.six
+        pip install -r <(sed '/^pdfminer.*/d' "$reqfile")
     done
 }
 
@@ -106,6 +108,8 @@ if [[ $MODE = "parallel" ]]; then
         fi
 
     done
+    # Make sure we let the last background process terminate before closing
+    wait
 else
     run_test_instance "$ADDONS_LIST" "/mnt/logs"
 fi

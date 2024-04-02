@@ -34,7 +34,6 @@ RUN apt update && \
         python3-magic \
         python3-num2words \
         python3-odf \
-        python3-pdfminer \
         python3-pip \
         python3-phonenumbers \
         python3-pyldap \
@@ -46,6 +45,7 @@ RUN apt update && \
         python3-watchdog \
         python3-xlrd \
         python3-xlwt \
+        python3-pdfminer \
         xz-utils \
         build-essential \
         python3 \

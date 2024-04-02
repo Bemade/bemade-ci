@@ -1,0 +1,23 @@
+# Used for testing the CI workflow items locally
+
+services:
+  postgres:
+    image: postgres:12.0
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+      POSTGRES_DB: odoo
+    ports:
+      - 5432:5432
+  odoo:
+    image: ghcr.io/bemade/test-odoo:latest
+    entrypoint: ["run_tests"]
+    # entrypoint: ["/bin/bash"]
+    # stdin_open: true
+    # tty: true
+    volumes:
+      - ${EXTRA_ADDONS_DIR:-../addons}:/mnt/extra-addons
+      - ../logs:/mnt/logs
+      - ../.repos:/mnt/.repos
+      - ./requirements.txt:/mnt/extra-requirements/requirements.txt
+
