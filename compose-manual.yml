@@ -20,4 +20,6 @@ services:
       - ../logs:/mnt/logs
       - ../.repos:/mnt/.repos
       - ./requirements.txt:/mnt/extra-requirements/requirements.txt
+      - ../enterprise:/mnt/enterprise
+      - ../design-themes:/mnt/design-themes
 

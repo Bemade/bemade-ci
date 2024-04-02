@@ -105,8 +105,6 @@ RUN npm install -g rtlcss
 # Install Odoo from sources
 
 COPY ./odoo /opt/odoo/
-COPY ./enterprise/ /opt/odoo/enterprise/
-COPY ./design-themes /opt/odoo/design-themes/
 COPY ./odoo.conf /etc/odoo/
 
 # Install Odoo and testing requirements in a virtual environment
@@ -123,4 +121,5 @@ RUN python3.10 -m venv /opt/odoo/venv \
 
 COPY ./run_tests /usr/local/bin/
 
-VOLUME ["/mnt/extra-addons", "/mnt/.repos", "/mnt/logs", "/mnt/extra-requirements"]
+VOLUME ["/mnt/extra-addons", "/mnt/.repos", "/mnt/logs", \
+"/mnt/extra-requirements", "/mnt/enterprise", "/mnt/design-themes"]
