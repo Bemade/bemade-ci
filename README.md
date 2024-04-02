@@ -34,7 +34,8 @@ Compose file such as the examples found [here](https://github.com/bemade/bemade-
 and [here](https://github.com/bemade/bemade-ci/blob/17.0/compose-manual.yml). Note that
 these examples assume that there are some directories present in the local filesystem and
 will not function "out of the box". Please change the mount locations for logs, extra-addons
-and extra-requirements according to your needs.
+and extra-requirements according to your needs. If you need to test with Odoo Enterprise, you will need
+to mount the enterprise and design-themes sources at /mnt/enterprise and /mnt/design-themes.
 
 ## Running Tests
 
