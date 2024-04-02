@@ -7,66 +7,53 @@ CI on these images, be aware that, while we will not break things without
 reason, we will prioritize ease of maintenance for Bemade over backward
 compatibility. ⚠️
 
+These images were developed with heavy influence from the Odoo Community Association's
+[oca-ci](https://github.com/oca/oca-ci) project as well as Odoo's own 
+[Docker project](https://github.com/odoo/docker).
+
+## Guarantees
+
 These images provide the following guarantees:
 
 - Odoo runtime dependencies are installed (`wkhtmltopdf`, `lessc`, etc).
 - Odoo source code is in `/opt/odoo`.
 - Odoo is installed in editable mode in a virtualenv isolated from system python packages.
 - The Odoo configuration file exists at `$ODOO_RC`.
-- The `python`, `pip` and `odoo` commands
-  found first in `PATH` are from that virtualenv.
-- `coverage` is installed in that virtualenv.
 - Prerequisites for running Odoo tests are installed in that virtualenv
   (this notably includes `websocket-client` and the chrome browser for running
   browser tests).
+- Python requirements in files found in /mnt/extra-requirements are installed in the Odoo
+  virtualenv.
+- Addons in /mnt/extra-addons are available to the Odoo installation.
 
-Environment variables:
+## Requirements
 
-- `ODOO_VERSION` (8.0, ..., 14.0, ...)
-- `ODOO_RC`
-- `OPENERP_SERVER=$ODOO_RC`
-- `PGHOST=postgres`
-- `PGUSER=odoo`
-- `PGPASSWORD=odoo`
-- `PGDATABASE=odoo`
-- `PIP_INDEX_URL=https://wheelhouse.odoo-community.org/oca-simple-and-pypi`
-- `PIP_DISABLE_PIP_VERSION_CHECK=1`
-- `PIP_NO_PYTHON_VERSION_WARNING=1`
-- `ADDONS_DIR=.`
-- `ADDONS_PATH=/opt/odoo/addons`
-- `INCLUDE=`
-- `EXCLUDE=`
-- `OCA_GIT_USER_NAME=oca-ci`: git user name to commit `.pot` files
-- `OCA_GIT_USER_EMAIL=oca-ci@odoo-community.org`: git user email to commit
-  `.pot` files
+This image was built with the assumption that tests would be run in an environment where
+a Postgresql host is available. The simplest way to run tests is with a simple Docker
+Compose file such as the examples found [here](https://github.com/bemade/bemade-ci/blob/17.0/compose.yml)
+and [here](https://github.com/bemade/bemade-ci/blob/17.0/compose-manual.yml). Note that
+these examples assume that there are some directories present in the local filesystem and
+will not function "out of the box". Please change the mount locations for logs, extra-addons
+and extra-requirements according to your needs.
 
-Available commands:
+## Running Tests
 
-- `oca_install_addons`: make addons to test (found in `$ADDONS_DIR`, modulo
-  `$INCLUDE` an `$EXCLUDE`) and their dependencies available in the Odoo addons
-  path. Append `addons_path=${ADDONS_PATH},${ADDONS_DIR}` to `$ODOO_RC`.
-- `oca_init_test_database`: create a test database named `$PGDATABASE` with
-  direct dependencies of addons to test installed in it
-- `oca_run_tests`: run tests of addons on `$PGDATABASE`, with coverage.
-- `oca_export_and_commit_pot`: export `.pot` files for all addons in
-  `$ADDONS_DIR` that are installed in `$PGDATABASE`; git commit changes if any,
-  using `$OCA_GIT_USER_NAME` and `$OCA_GIT_USER_EMAIL`.
-- `oca_git_push_if_remote_did_not_change`: push local commits unless the remote
-  tracked branch has evolved.
-- `oca_export_and_push_pot` combines the two previous commands.
+### Automatic Mode
 
-## Tests
+Once everything is set up correctly, you can run the tests for all addons in the extra-addons
+directory by executing a simple `docker compose up -d` command where your compose.yml file is
+located. This will set up virtualenv requirements and rotate through testing each addon individually
+in a new test database. Essentially, it will run the command
+`odoo-bin -i <addon> --test-enable -d <new-db> --stop-after-init` (along with a few more options
+to avoid port collisions and set the logfile path, etc.). Tests are run on a maximum of 3 Odoo 
+processes in parallel. Running tests this way is useful for nightly testing of all modules, for example.
 
-Tests are written using [pytest](https://pytest.org) in the `tests` directory.
+### Manual Mode
 
-You can run them using the `runtests.sh` script inside the container.
+If you need to run tests without running through all addons in the extra-addons directory, you will
+want to use a variation on the compose-manual.yml to run your test instance. This is achieved with
+the following commands, run from the location of the compose-manual.yml file:
 
-In the test directory, there is a `docker-compose.yml` to help run the tests.
-Tune it to your liking, then run:
-
-`docker compose run --build test ./runtests.sh -v`
-
-This docker-compose mounts this project, and `runtests.sh` adds then `bin` directory to
-the `PATH` for easier dev/test iteration.
-
-There is also a devcontainer configuration.
+  docker compose -f compose-manual.yml up -d
+  docker exec -it odoo /bin/bash
+  run_tests -s -a <module_name>
