@@ -99,8 +99,19 @@ RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main' > /etc/a
     && rm -f /etc/apt/sources.list.d/pgdg.list \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Google Chrome for browser tests
-RUN apt update && apt -y install --no-install-recommends chromium-browser
+# Install Google Chrome if building for amd64... not yet available for arm64
+
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        curl -sSL \
+        https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+        -o /tmp/chrome.deb \
+        && apt-get update \
+        && apt-get -y install --no-install-recommends /tmp/chrome.deb \
+        && rm /tmp/chrome.deb; \
+    else \
+        : ; \
+    fi
+
 
 # Install rtlcss (on Debian buster)
 RUN npm install -g rtlcss

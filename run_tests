@@ -36,8 +36,15 @@ run_test_instance() {
     port=$(next_available_port 8069)
     echo "testing $addon on port $port"
     # Run the tests and if everything passed, delete the logfile
-    psql odoo -c "drop database if exists $dbname;"; /opt/odoo/odoo-bin -c /etc/odoo/odoo.conf -d "$dbname" --test-enable -i "$addon" \
-         --stop-after-init --logfile "$logfile" -p "$port"
+    psql odoo -c "drop database if exists $dbname;"; \
+        /opt/odoo/odoo-bin \
+            -c /etc/odoo/odoo.conf \
+            -d "$dbname" \
+            --test-enable \
+            -i "$addon,$DEPENDS_LIST" \
+            --stop-after-init \
+            --logfile "$logfile" \
+            -p "$port"
     # Prepend the list of addons to the log file
     echo -e "Addons tested: $addons\n$(cat "$logfile")" > "$logfile.temp" && mv "$logfile.temp" "$logfile"
     echo "Done testing $addon."
@@ -89,7 +96,12 @@ if [[ -z $ADDONS_LIST ]]; then
     else
         ADDONS_DIR="$GITHUB_WORKSPACE"
     fi
-    ADDONS_LIST=$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list --separator=,)
+    # Load the dependencies for all the addons in the addons directory because
+    # sometimes our addons break tests from modules they don't depend on. This
+    # helps to spot which module is breaking tests that other modules of ours
+    # actually depend on.
+    DEPENDS_LIST=$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list-depends --separator=,)
+    ADDONS_LIST="$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list --separator=,)"
 fi
 
 if [[ $MODE = "parallel" ]]; then
