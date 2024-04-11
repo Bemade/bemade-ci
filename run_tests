@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run a single Odoo test instance
-# Usage: run_tests [-a comma,separated,addons,list] [-s]
+# Usage: run_tests [-a comma,separated,addons,list] [-s] [-f test-tags]
 # -s runs in single test instance mode, otherwise 3 runners run in parallel
 # Addons must be in /mnt/extra-addons or $GITHUB_WORKSPACE
 
@@ -32,6 +32,12 @@ run_test_instance() {
         dbname="test_$addon"
         logfile=$LOGDIR/$( date "+%Y-%m-%d_%H:%M:%S")"-$addon.log"
     fi
+    local test_part
+    if [[ -n $TEST_TAGS ]]; then
+        test_part="--test-tags $TEST_TAGS"
+    else
+        test_part="--test-enable"
+    fi
     local port
     port=$(next_available_port 8069)
     echo "testing $addon on port $port"
@@ -40,7 +46,7 @@ run_test_instance() {
         /opt/odoo/odoo-bin \
             -c /etc/odoo/odoo.conf \
             -d "$dbname" \
-            --test-enable \
+            $test_part \
             -i "$addon,$DEPENDS_LIST" \
             --stop-after-init \
             --logfile "$logfile" \
@@ -66,13 +72,16 @@ init_extra_requirements() {
 }
 
 # Parse options and set up addons list and run mode
-while getopts 'sa:' OPTION; do
+while getopts 'sa:f:' OPTION; do
     case "$OPTION" in
         s)
             MODE="single"
             ;;
         a)
             ADDONS_LIST="$OPTARG"
+            ;;
+        f)
+            TEST_TAGS="$OPTARG"
             ;;
         *)
             echo "Invalid flag $OPTION."
