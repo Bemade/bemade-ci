@@ -127,7 +127,7 @@ RUN python3 -m venv /opt/odoo/venv \
     && pip install --no-cache-dir "setuptools<=58" wheel \
     && pip install --no-cache-dir ebaysdk==2.1.5 pdf417gen==0.7.1 vatnumber \
     && pip install -r /opt/odoo/requirements.txt \
-    && pip install manifestoo websocket-client odoo-test-helper \
+    && pip install manifestoo websocket-client==1.2.3 odoo-test-helper \
     && deactivate
 
 # Note: runbot dockerfile  also installs coverage==4.5.4 astroid==2.4.2
