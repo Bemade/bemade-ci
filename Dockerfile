@@ -30,6 +30,7 @@ RUN set -x ; \
     libsasl2-dev \
     libxslt1-dev \
     lsb-release \
+    lsof \
     node-less \
     ocrmypdf \
     sed \
