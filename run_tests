@@ -40,7 +40,10 @@ run_test_instance() {
     fi
     local port
     port=$(next_available_port 8069)
-    echo "testing $addon on port $port"
+    echo "testing $addon with $DEPENDS_LIST on port $port"
+    # Make directories for screenshots and screencasts if they don't exist
+    mkdir -p "$LOGDIR/screenshots"
+    mkdir -p "$LOGDIR/screencasts"
     # Run the tests and if everything passed, delete the logfile
     psql odoo -c "drop database if exists $dbname;"; \
         /opt/odoo/odoo-bin \
@@ -50,7 +53,9 @@ run_test_instance() {
             -i "$addon,$DEPENDS_LIST" \
             --stop-after-init \
             --logfile "$logfile" \
-            -p "$port"
+            -p "$port" \
+            --screencasts "$LOGDIR/screenshots" \
+            --screencasts "$LOGDIR/screencasts"
     # Prepend the list of addons to the log file
     echo -e "Addons tested: $addons\n$(cat "$logfile")" > "$logfile.temp" && mv "$logfile.temp" "$logfile"
     echo "Done testing $addon."
@@ -99,17 +104,18 @@ init_extra_requirements
 if [[ -z $MODE ]]; then
     MODE="parallel"
 fi
+if [[ -z $GITHUB_WORKSPACE ]]; then
+    ADDONS_DIR="/mnt/extra-addons"
+else
+    ADDONS_DIR="$GITHUB_WORKSPACE"
+fi
+# Load the dependencies for all the addons in the addons directory because
+# sometimes our addons break tests from modules they don't depend on. This
+# helps to spot which module is breaking tests that other modules of ours
+# actually depend on.
+DEPENDS_LIST=$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list-depends --separator=,)
+# If no addons were selected, select them all from the provided addons directory
 if [[ -z $ADDONS_LIST ]]; then
-    if [[ -z $GITHUB_WORKSPACE ]]; then
-        ADDONS_DIR="/mnt/extra-addons"
-    else
-        ADDONS_DIR="$GITHUB_WORKSPACE"
-    fi
-    # Load the dependencies for all the addons in the addons directory because
-    # sometimes our addons break tests from modules they don't depend on. This
-    # helps to spot which module is breaking tests that other modules of ours
-    # actually depend on.
-    DEPENDS_LIST=$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list-depends --separator=,)
     ADDONS_LIST="$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list --separator=,)"
 fi
 
