@@ -41,9 +41,8 @@ run_test_instance() {
     local port
     port=$(next_available_port 8069)
     echo "testing $addon with $DEPENDS_LIST on port $port"
-    # Make directories for screenshots and screencasts if they don't exist
+    # Make a directory for screenshots if it doesn't exist
     mkdir -p "$LOGDIR/screenshots"
-    mkdir -p "$LOGDIR/screencasts"
     # Run the tests and if everything passed, delete the logfile
     psql odoo -c "drop database if exists $dbname;"; \
         /opt/odoo/odoo-bin \
@@ -54,8 +53,7 @@ run_test_instance() {
             --stop-after-init \
             --logfile "$logfile" \
             -p "$port" \
-            --screencasts "$LOGDIR/screenshots" \
-            --screencasts "$LOGDIR/screencasts"
+            --screenshots "$LOGDIR/screenshots"
     # Prepend the list of addons to the log file
     echo -e "Addons tested: $addons\n$(cat "$logfile")" > "$logfile.temp" && mv "$logfile.temp" "$logfile"
     echo "Done testing $addon."
