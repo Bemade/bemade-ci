@@ -1,7 +1,9 @@
 #!/bin/bash
 # Run a single Odoo test instance
-# Usage: run_tests [-a comma,separated,addons,list] [-s] [-f test-tags]
+# Usage: run_tests [-a comma,separated,addons,list] [-s] [-f test-tags] [-d depends_list]
 # -s runs in single test instance mode, otherwise 3 runners run in parallel
+# -d takes a comma-separated list of addons to install alongside the ones being tested. If omitted, the
+#    system will install all dependencies for the addons in the addons directory.
 # Addons must be in /mnt/extra-addons or $GITHUB_WORKSPACE
 
 # Function to check if a port is in use
@@ -75,7 +77,7 @@ init_extra_requirements() {
 }
 
 # Parse options and set up addons list and run mode
-while getopts 'sa:f:' OPTION; do
+while getopts 'sa:f:d:' OPTION; do
     case "$OPTION" in
         s)
             MODE="single"
@@ -85,6 +87,9 @@ while getopts 'sa:f:' OPTION; do
             ;;
         f)
             TEST_TAGS="$OPTARG"
+            ;;
+        d)
+            DEPENDS_LIST="$OPTARG"
             ;;
         *)
             echo "Invalid flag $OPTION."
@@ -111,7 +116,9 @@ fi
 # sometimes our addons break tests from modules they don't depend on. This
 # helps to spot which module is breaking tests that other modules of ours
 # actually depend on.
-DEPENDS_LIST=$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list-depends --separator=,)
+if [[ -z DEPENDS_LIST ]]; then
+  DEPENDS_LIST=$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list-depends --separator=,)
+fi
 # If no addons were selected, select them all from the provided addons directory
 if [[ -z $ADDONS_LIST ]]; then
     ADDONS_LIST="$(manifestoo --select-addons-dir="$ADDONS_DIR" --odoo-series=17.0 list --separator=,)"
