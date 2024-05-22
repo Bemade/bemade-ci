@@ -18,7 +18,6 @@ RUN set -x ; \
     apt-transport-https \
     build-essential \
     ca-certificates curl \
-    ffmpeg \
     file \
     fonts-freefont-ttf \
     fonts-noto-cjk \
